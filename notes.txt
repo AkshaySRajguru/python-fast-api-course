@@ -1,2 +1,2 @@
 1. pip install fastapi[all]
-2. (venv) \python-fast-api\app> uvicorn main:app --reloaduvicorn main:app --reload
+2. (venv) \python-fast-api\app> uvicorn main:app --reload
