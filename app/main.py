@@ -1,13 +1,18 @@
 from typing import Optional
 from random import randrange
+import time
 
 from fastapi import FastAPI, HTTPException, status
 # from fastapi.params import Body
 from pydantic import BaseModel
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+import utilities
 
 
 class Post(BaseModel):
-    id: Optional[int] = None
+    # id: Optional[int] = None
     title: str
     content: str
     published: bool = True
@@ -15,6 +20,20 @@ class Post(BaseModel):
 
 
 app = FastAPI()
+
+# database connection
+while True:
+    try:
+        conn = psycopg2.connect(host='localhost', database='fastapi',
+                                user='postgres', password='test123',
+                                cursor_factory=RealDictCursor)
+        cursor = conn.cursor()
+        print('*** Database connection is successful!')
+        break
+    except Exception as e:
+        print('*** Database connection failed! Error occurred :' + str(e))
+        time.sleep(2)
+
 
 my_posts = [{"id": 1, "title": "Covid vaccination", "content": "there are three types of vaccines"},
             {"id": 2, "title": "HIS details", "content": "lot of beds available to associates"}]
@@ -40,7 +59,16 @@ def read_item(item_id: int, q: Optional[str] = None):
 
 @app.get("/api/get/all/posts/")
 async def get_all_posts():
-    return my_posts
+    try:
+        cursor.execute(""" SELECT * FROM posts""")
+        posts = cursor.fetchall()
+        if posts:
+            result = utilities.prepare_response(True, 'Retrieved all posts successfully.', posts)
+        else:
+            result = utilities.prepare_response(False, 'Failed to fetch all posts')
+        return result
+    except Exception as err:
+        return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
 
 @app.get("/api/get/posts/{id}")
