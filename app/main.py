@@ -12,7 +12,7 @@ import utilities
 
 
 class Post(BaseModel):
-    # id: Optional[int] = None
+    id: Optional[int] = None
     title: str
     content: str
     published: bool = True
@@ -56,7 +56,7 @@ def read_item(item_id: int, q: Optional[str] = None):
 @app.get("/api/all_posts/")
 async def get_all_posts():
     try:
-        cursor.execute(""" SELECT * FROM posts""")
+        cursor.execute(""" SELECT * FROM posts ORDER BY id """)
         posts = cursor.fetchall()
         if posts:
             result = utilities.prepare_response(True, 'Retrieved all posts successfully.', posts)
@@ -88,28 +88,22 @@ async def create_post(post: Post):
         return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
 
-# @app.put("/api/update_post/", status_code=status.HTTP_200_OK)
-# async def update_post(post: Post):
-#     try:
-#         post_dict = post.dict()
-#         print(post_dict)
-#         is_id_passed = "id" in post_dict.keys()
-#         if not is_id_passed:
-#             return HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-#                                  detail=f'pass id of post in the body of the request!')
-#         result = None
-#         for i, p in enumerate(my_posts):
-#             if p['id'] == int(post_dict["id"]):
-#                 my_posts[i] = post_dict
-#                 result = True
-#         if result:
-#             return {"message": "post updated successfully!", "data": post_dict}
-#         else:
-#             return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'post with id:{id} is not found!')
-#     except Exception as e:
-#         return HTTPException(status_code=status.HTTP_200_OK, detail=f'Error occurred: {e}')
-#
-#
+@app.put("/api/update_post/", status_code=status.HTTP_200_OK)
+async def update_post(post: Post):
+    try:
+        for item in [post.id, post.title, post.content, post.published]:
+            if item is None:
+                return utilities.prepare_response(False, 'Please pass valid id, title, '
+                                                         'content and published data for a post.')
+
+        cursor.execute(" UPDATE posts SET title=(%s), content=(%s), "
+                       "published=(%s) WHERE id=(%s) RETURNING * ",
+                       (post.title, post.content, post.published, str(post.id)))
+        updated_post = cursor.fetchone()
+        return utilities.prepare_response(True, 'Successfully updated a post', updated_post)
+    except Exception as err:
+        return utilities.prepare_response(False, 'Error occurred: ' + str(err))
+
 # @app.delete("/api/delete_post/{id}", status_code=status.HTTP_200_OK)
 # async def delete_post(id: int):
 #     try:
