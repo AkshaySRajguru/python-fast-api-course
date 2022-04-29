@@ -59,10 +59,9 @@ async def get_all_posts():
         cursor.execute(""" SELECT * FROM posts ORDER BY id """)
         posts = cursor.fetchall()
         if posts:
-            result = utilities.prepare_response(True, 'Retrieved all posts successfully.', posts)
+            return utilities.prepare_response(True, 'Retrieved all posts successfully.', posts)
         else:
-            result = utilities.prepare_response(False, 'Failed to fetch all posts')
-        return result
+            return utilities.prepare_response(False, 'Failed to fetch all posts')
     except Exception as err:
         return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
@@ -72,7 +71,10 @@ async def get_posts(id: int):
     try:
         cursor.execute(" SELECT * FROM posts WHERE id=(%s) ", (str(id)))
         retrieved_post = cursor.fetchone()
-        return utilities.prepare_response(True, 'Successfully fetched a post', retrieved_post)
+        if retrieved_post:
+            return utilities.prepare_response(True, 'Successfully fetched a post', retrieved_post)
+        else:
+            return utilities.prepare_response(False, 'Failed to fetch a post')
     except Exception as err:
         return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
@@ -83,7 +85,10 @@ async def create_post(post: Post):
         cursor.execute(" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING * ",
                        (post.title, post.content, post.published))
         new_post = cursor.fetchone()
-        return utilities.prepare_response(True, 'Successfully created a post', new_post)
+        if new_post:
+            return utilities.prepare_response(True, 'Successfully created a post', new_post)
+        else:
+            return utilities.prepare_response(False, 'Failed to create a post')
     except Exception as err:
         return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
@@ -100,21 +105,22 @@ async def update_post(post: Post):
                        "published=(%s) WHERE id=(%s) RETURNING * ",
                        (post.title, post.content, post.published, str(post.id)))
         updated_post = cursor.fetchone()
-        return utilities.prepare_response(True, 'Successfully updated a post', updated_post)
+        if updated_post:
+            return utilities.prepare_response(True, 'Successfully updated a post', updated_post)
+        else:
+            return utilities.prepare_response(False, 'Failed to update a post')
     except Exception as err:
         return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
-# @app.delete("/api/delete_post/{id}", status_code=status.HTTP_200_OK)
-# async def delete_post(id: int):
-#     try:
-#         result = None
-#         for i, p in enumerate(my_posts):
-#             if p["id"] == int(id):
-#                 my_posts.pop(i)
-#                 result = True
-#         if result:
-#             return {"message": f"post with id:{id} deleted successfully!"}
-#         else:
-#             return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'post with id:{id} is not found!')
-#     except Exception as e:
-#         return HTTPException(status_code=status.HTTP_200_OK, detail=f'Error occurred: {e}')
+
+@app.delete("/api/delete_post/{id}", status_code=status.HTTP_200_OK)
+async def delete_post(id: int):
+    try:
+        cursor.execute(" DELETE FROM posts WHERE id=(%s) RETURNING * ", (str(id)))
+        deleted_post = cursor.fetchone()
+        if deleted_post:
+            return utilities.prepare_response(True, 'Successfully deleted a post', deleted_post)
+        else:
+            return utilities.prepare_response(False, 'Failed to delete a post')
+    except Exception as err:
+        return utilities.prepare_response(False, 'Error occurred: ' + str(err))
