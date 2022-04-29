@@ -85,6 +85,7 @@ async def create_post(post: Post):
         cursor.execute(" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING * ",
                        (post.title, post.content, post.published))
         new_post = cursor.fetchone()
+        conn.commit()
         if new_post:
             return utilities.prepare_response(True, 'Successfully created a post', new_post)
         else:
@@ -105,6 +106,7 @@ async def update_post(post: Post):
                        "published=(%s) WHERE id=(%s) RETURNING * ",
                        (post.title, post.content, post.published, str(post.id)))
         updated_post = cursor.fetchone()
+        conn.commit()
         if updated_post:
             return utilities.prepare_response(True, 'Successfully updated a post', updated_post)
         else:
@@ -118,6 +120,7 @@ async def delete_post(id: int):
     try:
         cursor.execute(" DELETE FROM posts WHERE id=(%s) RETURNING * ", (str(id)))
         deleted_post = cursor.fetchone()
+        conn.commit()
         if deleted_post:
             return utilities.prepare_response(True, 'Successfully deleted a post', deleted_post)
         else:
