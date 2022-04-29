@@ -35,10 +35,6 @@ while True:
         time.sleep(2)
 
 
-my_posts = [{"id": 1, "title": "Covid vaccination", "content": "there are three types of vaccines"},
-            {"id": 2, "title": "HIS details", "content": "lot of beds available to associates"}]
-
-
 @app.get("/")
 async def read_root():
     return {"message": "Hello World!"}
@@ -57,7 +53,7 @@ def read_item(item_id: int, q: Optional[str] = None):
     return {"item_id": item_id, "q": q}
 
 
-@app.get("/api/get/all/posts/")
+@app.get("/api/all_posts/")
 async def get_all_posts():
     try:
         cursor.execute(""" SELECT * FROM posts""")
@@ -71,66 +67,60 @@ async def get_all_posts():
         return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
 
-@app.get("/api/get/posts/{id}")
+@app.get("/api/post/{id}")
 async def get_posts(id: int):
     try:
-        result = None
-        for post in my_posts:
-            if post['id'] == int(id):
-                result = post
-        if result:
-            return result
-        else:
-            return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'post with id:{id} is not found!')
-    except Exception as e:
-        return HTTPException(status_code=status.HTTP_200_OK, detail=f'Error occurred: {e}')
-
-# @app.post("/api/create/posts")
-# async def create_post(body: dict = Body(...)):
-#     return {"title": body["title"], "content": body["content"]}
+        cursor.execute(" SELECT * FROM posts WHERE id=(%s) ", (str(id)))
+        retrieved_post = cursor.fetchone()
+        return utilities.prepare_response(True, 'Successfully fetched a post', retrieved_post)
+    except Exception as err:
+        return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
 
-@app.post("/api/create/posts", status_code=status.HTTP_201_CREATED)
+@app.post("/api/create_post/", status_code=status.HTTP_201_CREATED)
 async def create_post(post: Post):
-    latest_post = post.dict()
-    latest_post['id'] = randrange(0, 1000)
-    my_posts.append(latest_post)
-    return latest_post
-
-
-@app.put("/api/update/posts/", status_code=status.HTTP_200_OK)
-async def update_post(post: Post):
     try:
-        post_dict = post.dict()
-        print(post_dict)
-        is_id_passed = "id" in post_dict.keys()
-        if not is_id_passed:
-            return HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                 detail=f'pass id of post in the body of the request!')
-        result = None
-        for i, p in enumerate(my_posts):
-            if p['id'] == int(post_dict["id"]):
-                my_posts[i] = post_dict
-                result = True
-        if result:
-            return {"message": "post updated successfully!", "data": post_dict}
-        else:
-            return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'post with id:{id} is not found!')
-    except Exception as e:
-        return HTTPException(status_code=status.HTTP_200_OK, detail=f'Error occurred: {e}')
+        cursor.execute(" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING * ",
+                       (post.title, post.content, post.published))
+        new_post = cursor.fetchone()
+        return utilities.prepare_response(True, 'Successfully created a post', new_post)
+    except Exception as err:
+        return utilities.prepare_response(False, 'Error occurred: ' + str(err))
 
 
-@app.delete("/api/delete/posts/{id}", status_code=status.HTTP_200_OK)
-async def delete_post(id: int):
-    try:
-        result = None
-        for i, p in enumerate(my_posts):
-            if p["id"] == int(id):
-                my_posts.pop(i)
-                result = True
-        if result:
-            return {"message": f"post with id:{id} deleted successfully!"}
-        else:
-            return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'post with id:{id} is not found!')
-    except Exception as e:
-        return HTTPException(status_code=status.HTTP_200_OK, detail=f'Error occurred: {e}')
+# @app.put("/api/update_post/", status_code=status.HTTP_200_OK)
+# async def update_post(post: Post):
+#     try:
+#         post_dict = post.dict()
+#         print(post_dict)
+#         is_id_passed = "id" in post_dict.keys()
+#         if not is_id_passed:
+#             return HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+#                                  detail=f'pass id of post in the body of the request!')
+#         result = None
+#         for i, p in enumerate(my_posts):
+#             if p['id'] == int(post_dict["id"]):
+#                 my_posts[i] = post_dict
+#                 result = True
+#         if result:
+#             return {"message": "post updated successfully!", "data": post_dict}
+#         else:
+#             return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'post with id:{id} is not found!')
+#     except Exception as e:
+#         return HTTPException(status_code=status.HTTP_200_OK, detail=f'Error occurred: {e}')
+#
+#
+# @app.delete("/api/delete_post/{id}", status_code=status.HTTP_200_OK)
+# async def delete_post(id: int):
+#     try:
+#         result = None
+#         for i, p in enumerate(my_posts):
+#             if p["id"] == int(id):
+#                 my_posts.pop(i)
+#                 result = True
+#         if result:
+#             return {"message": f"post with id:{id} deleted successfully!"}
+#         else:
+#             return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'post with id:{id} is not found!')
+#     except Exception as e:
+#         return HTTPException(status_code=status.HTTP_200_OK, detail=f'Error occurred: {e}')
